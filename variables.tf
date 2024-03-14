@@ -7,3 +7,8 @@ variable "table_name" {
   type = string
   default = "default-value"
 }
+
+variable "aws_region" {
+  type = string
+  default = "eu-central-1"
+}
