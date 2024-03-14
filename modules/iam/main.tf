@@ -140,3 +140,145 @@ resource "aws_iam_role_policy_attachment" "attach_policy_to_lambda_update_course
   role       = aws_iam_role.update_course_lambda_role.name
 }
 
+resource "aws_iam_policy" "get_all_courses_policy" {
+  name        = "get_all_courses_policy" 
+  policy      = data.aws_iam_policy_document.get_all_courses.json
+}
+
+data "aws_iam_policy_document" "get_all_courses" {
+    statement {
+      effect = "Allow"
+      actions = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "dynamodb:Scan",
+        "dynamodb:GetItem"
+      ]
+      resources = [
+        "*", 
+        "${var.dynamodb_courses_arn}/*"
+      ]
+    }
+}
+
+resource "aws_iam_role" "get_all_courses_lambda_role" {
+  name = "get-all-courses-lambda-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "sts:AssumeRole"
+        ]
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "attach_policy_to_lambda_get_all_courses" {
+  policy_arn = aws_iam_policy.get_all_courses_policy.arn
+  role       = aws_iam_role.get_all_courses_lambda_role.name
+}
+
+resource "aws_iam_policy" "get_one_course_policy" {
+  name        = "get_one_course_policy" 
+  policy      = data.aws_iam_policy_document.get_one_course.json
+}
+
+data "aws_iam_policy_document" "get_one_course" {
+    statement {
+      effect = "Allow"
+      actions = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "dynamodb:Scan",
+        "dynamodb:GetItem"
+      ]
+      resources = [
+        "*", 
+        "${var.dynamodb_courses_arn}/*"
+      ]
+    }
+}
+
+resource "aws_iam_role" "get_one_course_lambda_role" {
+  name = "get-one-course-lambda-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "sts:AssumeRole"
+        ]
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "attach_policy_to_lambda_get_one_course" {
+  policy_arn = aws_iam_policy.get_one_course_policy.arn
+  role       = aws_iam_role.get_one_course_lambda_role.name
+}
+
+
+
+
+resource "aws_iam_policy" "delete_course_policy" {
+  name        = "delete_course_policy" 
+  policy      = data.aws_iam_policy_document.delete_course.json
+}
+
+data "aws_iam_policy_document" "delete_course" {
+    statement {
+      effect = "Allow"
+      actions = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "dynamodb:Scan",
+        "dynamodb:DeleteItem",
+      ]
+      resources = [
+        "*", 
+        "${var.dynamodb_courses_arn}/*"
+      ]
+    }
+}
+
+resource "aws_iam_role" "delete_course_lambda_role" {
+  name = "delete-course-lambda-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "sts:AssumeRole"
+        ]
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "attach_policy_to_lambda_delete_course" {
+  policy_arn = aws_iam_policy.delete_course_policy.arn
+  role       = aws_iam_role.delete_course_lambda_role.name
+}
+
+
