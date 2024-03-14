@@ -38,4 +38,20 @@ resource "aws_lambda_function" "save_course" {
   runtime = "nodejs16.x"
 }
 
+data "archive_file" "update_course" {
+  type        = "zip"
+  source_file = "modules/lambda/functions/update-course/update-course.js"
+  output_path = "modules/lambda/functions/update-course/update-course.zip"
+}
+
+resource "aws_lambda_function" "update_course" {
+  filename      = data.archive_file.update_course.output_path
+  function_name = "update-course-${module.labels.stage}-${module.labels.name}"
+  role          = var.update_course_arn
+  handler       = "update-course.handler"
+
+  source_code_hash = data.archive_file.update_course.output_base64sha256
+
+  runtime = "nodejs16.x"
+}
 
