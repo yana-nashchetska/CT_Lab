@@ -25,6 +25,7 @@ module "lambda" {
     stage  = "dev"
 
     get_all_authors_arn = module.iam.get_all_authors_role_arn
+    save_course_arn     = module.iam.save_course_role_arn
 }
 
 
