@@ -18,17 +18,10 @@ data "aws_iam_policy_document" "get-all-authors" {
         "dynamodb:Scan"
       ]
       resources = [
-        "*"
+        "*", 
+        "${var.dynamodb_authors_arn}/*"
       ]
     }
-    # statement {
-    #   effect = "Allow"
-    #   actions = [
-        
-    #   ]
-
-    #   resources = ["${var.dynamodb_authors_arn}/*"]
-    # }
 }
 
 resource "aws_iam_role" "get_all_authors_lambda_role" {
