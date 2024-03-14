@@ -15,19 +15,20 @@ data "aws_iam_policy_document" "get-all-authors" {
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents",
+        "dynamodb:Scan"
       ]
       resources = [
         "*"
       ]
     }
-    statement {
-      effect = "Allow"
-      actions = [
-        "dynamodb:Scan"
-      ]
+    # statement {
+    #   effect = "Allow"
+    #   actions = [
+        
+    #   ]
 
-      resources = ["${var.dynamodb_authors_arn}/*"]
-    }
+    #   resources = ["${var.dynamodb_authors_arn}/*"]
+    # }
 }
 
 resource "aws_iam_role" "get_all_authors_lambda_role" {
