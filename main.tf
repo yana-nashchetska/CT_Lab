@@ -62,4 +62,7 @@ module "api" {
     myprofile = var.myprofile
 
     get_all_authors_invoke_arn = module.lambda.get_all_authors_invoke_arn
+    get_all_authors_arn = module.lambda.get_all_authors_arn
+    get_all_courses_invoke_arn = module.lambda.get_all_courses_invoke_arn
+    get_all_courses_arn = module.lambda.get_all_courses_arn
 }
