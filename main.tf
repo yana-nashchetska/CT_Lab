@@ -32,26 +32,34 @@ module "lambda" {
     delete_course_arn   = module.iam.delete_course_role_arn
 }
 
+# module "api" {
+#     source = "./modules/api"
+#     name = "apishka"
+    
+#     get_all_authors_arn = module.lambda.get_all_authors_arn
+#     get_all_authors_invoke_arn = module.lambda.get_all_authors_invoke_arn
+
+#     save_course_arn = module.lambda.save_course_arn
+
+#     delete_course_arn = module.lambda.delete_course_arn
+
+#     update_course_arn = module.lambda.update_course_arn
+
+#     get_all_courses_arn = module.lambda.get_all_courses_arn
+
+#     get_one_course_arn = module.lambda.get_one_course_arn
+
+#     region = var.aws_region
+#     myprofile = var.myprofile
+#     # save_course_arn = module.lambda.save_course_arn
+#     # save_course_arn_invoke = module.lambda.save_course_arn_invoke
+# }
+
 module "api" {
     source = "./modules/api"
-    name = "api-attempt-2"
-    
-    get_all_authors_arn = module.lambda.get_all_authors_arn
-    get_all_authors_invoke_arn = module.lambda.get_all_authors_invoke_arn
-
-    save_course_arn = module.lambda.save_course_arn
-
-    delete_course_arn = module.lambda.delete_course_arn
-
-    update_course_arn = module.lambda.update_course_arn
-
-    get_all_courses_arn = module.lambda.get_all_courses_arn
-
-    get_one_course_arn = module.lambda.get_one_course_arn
-
-    region = var.aws_region
+    region = "eu-central-1"
+    name = "my-million-api"
     myprofile = var.myprofile
 
-    # save_course_arn = module.lambda.save_course_arn
-    # save_course_arn_invoke = module.lambda.save_course_arn_invoke
+    get_all_authors_invoke_arn = module.lambda.get_all_authors_invoke_arn
 }
