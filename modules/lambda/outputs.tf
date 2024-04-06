@@ -10,6 +10,9 @@ output "get_all_courses_invoke_arn" {
   value = aws_lambda_function.get_all_courses.invoke_arn
 }
 
+output "save_course_invoke_arn" {
+  value = aws_lambda_function.save_course.invoke_arn
+}
 
 output "save_course_arn" {
   value = aws_lambda_function.save_course.arn

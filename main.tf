@@ -65,4 +65,6 @@ module "api" {
     get_all_authors_arn = module.lambda.get_all_authors_arn
     get_all_courses_invoke_arn = module.lambda.get_all_courses_invoke_arn
     get_all_courses_arn = module.lambda.get_all_courses_arn
+    save_course_arn = module.lambda.save_course_arn
+    save_course_invoke_arn = module.lambda.save_course_invoke_arn
 }
