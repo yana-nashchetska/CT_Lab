@@ -607,21 +607,119 @@ resource "aws_lambda_permission" "api_gateway_invoke_delete_course" {
   principal     = "apigateway.amazonaws.com"
 }
 
+// OPTIONS FOR ID
+
+# resource "aws_api_gateway_method" "id_options" {
+#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
+#   resource_id   = aws_api_gateway_resource.course_by_id.id
+#   http_method   = "OPTIONS"
+#   authorization = "NONE"
+# }
+
+resource "aws_api_gateway_method" "id_options" {
+  rest_api_id   = aws_api_gateway_rest_api.my_api.id
+  resource_id   = aws_api_gateway_resource.course_by_id.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+# Відповідь для методу OPTIONS
+resource "aws_api_gateway_method_response" "id_options_response" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.id_options.http_method
+  status_code = "200"
+
+   response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.Access-Control-Allow-Origin" = true
+   }
+
+   depends_on = [ aws_api_gateway_method.id_options ]
+}
+# Прикріплення методу OPTIONS до ресурсу /id
+resource "aws_api_gateway_integration" "id_options_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.my_api.id
+  resource_id             = aws_api_gateway_resource.course_by_id.id
+  http_method             = aws_api_gateway_method.id_options.http_method
+  integration_http_method = "POST"
+  type                    = "AWS"
+
+  uri = var.get_one_course_invoke_arn
+
+  depends_on = [ aws_api_gateway_method.id_options ]
+}
+
+
+# Прикріплення відповіді до методу OPTIONS
+resource "aws_api_gateway_integration_response" "id_options_integration_response" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.id_options.http_method
+  status_code = aws_api_gateway_method_response.id_options_response.status_code
+
+  response_parameters = {
+        "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT'",
+        "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    }
+
+    depends_on = [
+     aws_api_gateway_method_response.id_options_response,
+     aws_api_gateway_integration.id_options_integration
+    ]
+}
+
+
+
 
 
 // DEPLOYMENT
 
+# resource "aws_api_gateway_deployment" "deployment" {
+#   depends_on = [
+#     aws_api_gateway_integration.get_authors,
+#     # aws_api_gateway_integration.authors_options_integration, 
+#     aws_api_gateway_integration.get_courses,
+#   ]
+
+#   rest_api_id = aws_api_gateway_rest_api.my_api.id
+#   stage_name = "dev"
+# }
+
+# resource "aws_api_gateway_deployment" "deployment" {
+#   rest_api_id = aws_api_gateway_rest_api.my_api.id
+
+#   triggers = {
+  
+#     redeployment = sha1(jsonencode([
+#       aws_api_gateway_resource.authors.id,
+#       aws_api_gateway_method.get_authors.id,
+#       aws_api_gateway_integration.get_authors.id,
+
+#       aws_api_gateway_resource.courses.id,
+#       aws_api_gateway_method.get_courses.id,
+#       aws_api_gateway_integration.get_courses.id,
+
+#       aws_api_gateway_resource.course_by_id.id,
+#       aws_api_gateway_method.get_course.id,
+#       aws_api_gateway_integration.get_course.id,
+#     ]))
+#   }
+
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
+
 resource "aws_api_gateway_deployment" "deployment" {
   depends_on = [
     aws_api_gateway_integration.get_authors,
-    # aws_api_gateway_integration.authors_options_integration, 
     aws_api_gateway_integration.get_courses,
   ]
+
 
   rest_api_id = aws_api_gateway_rest_api.my_api.id
   stage_name = "dev"
 }
-
-# module "cors" 
-#   source = "squidfunk/api-gateway-enable-cors/aws"
-#   version = "0.3.3"
