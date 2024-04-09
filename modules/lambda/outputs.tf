@@ -37,3 +37,7 @@ output "get_one_course_invoke_arn" {
 output "delete_course_arn" {
   value = aws_lambda_function.delete_course.arn
 }
+
+output "delete_course_invoke_arn" {
+  value = aws_lambda_function.delete_course.invoke_arn
+}

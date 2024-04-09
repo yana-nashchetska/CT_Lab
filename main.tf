@@ -69,4 +69,6 @@ module "api" {
     save_course_invoke_arn = module.lambda.save_course_invoke_arn
     get_one_course_arn = module.lambda.get_one_course_arn
     get_one_course_invoke_arn = module.lambda.get_one_course_invoke_arn
+    delete_course_arn = module.lambda.delete_course_arn
+    delete_course_invoke_arn = module.lambda.delete_course_invoke_arn
 }

@@ -49,6 +49,10 @@ variable "get_one_course_invoke_arn" {
   type = string
 }
 
-# variable "delete_course_arn" {
-#   type = string
-# }
+variable "delete_course_arn" {
+  type = string
+}
+
+variable "delete_course_invoke_arn" {
+  type = string
+}

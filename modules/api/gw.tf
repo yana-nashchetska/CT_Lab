@@ -535,38 +535,77 @@ resource "aws_lambda_permission" "api_gateway_invoke_put_course" {
 
 
 
+// DELETE 
 
-# # Прикріплення моделі до методу DELETE
-# resource "aws_api_gateway_integration" "course_by_id_delete_integration" {
-#   rest_api_id             = aws_api_gateway_rest_api.my_api.id
-#   resource_id             = aws_api_gateway_resource.course_by_id.id
-#   http_method             = "DELETE"
-#   integration_http_method = "DELETE"
-#   type                    = "AWS_PROXY"
-#   uri                     = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.delete_course.arn}/invocations"
-#   request_templates = {
-#     "application/json" = jsonencode({
-#       statusCode = 200
-#     })
-#   }
-# }
+resource "aws_api_gateway_method" "delete" {
+  rest_api_id   = aws_api_gateway_rest_api.my_api.id
+  resource_id   = aws_api_gateway_resource.course_by_id.id
+  http_method   = "DELETE"
+  authorization = "NONE"
+  request_validator_id = aws_api_gateway_request_validator.my_api.id
+}
 
-# # Прикріплення моделі до методу GET
-# resource "aws_api_gateway_integration" "course_by_id_get_integration" {
-#   rest_api_id             = aws_api_gateway_rest_api.my_api.id
-#   resource_id             = aws_api_gateway_resource.course_by_id.id
-#   http_method             = "GET"
-#   integration_http_method = "GET"
-#   type                    = "AWS_PROXY"
-#   uri                     = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.get_course.arn}/invocations"
-#   request_templates = {
-#     "application/json" = jsonencode({
-#       statusCode = 200
-#     })
-#   }
-# }
+resource "aws_api_gateway_method_response" "delete_course" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.delete.http_method
+  status_code = "200"
+
+  response_models = { "application/json" = aws_api_gateway_model.my_api.name }
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.Access-Control-Allow-Origin" = false
+  }
+}
+
+resource "aws_api_gateway_integration" "delete_course" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.delete.http_method
+  integration_http_method = "POST"
+  type = "AWS"
+  uri = var.delete_course_invoke_arn
+  
+  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
+
+  request_templates = {
+    "application/json" = <<EOF
+      {
+        "id": "$input.params('id')"
+      }
+    EOF
+  }
+
+  content_handling = "CONVERT_TO_TEXT"
+}
 
 
+
+resource "aws_api_gateway_integration_response" "delete_course" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.delete.http_method
+  status_code = aws_api_gateway_method_response.delete_course.status_code
+
+response_templates = {
+  "application/json" = <<EOF
+{
+  "body" : $input.json('$')
+}
+EOF
+}
+
+  content_handling = "CONVERT_TO_TEXT"
+}
+# //----------------------------
+# Додавання дозволу на виклик функції Lambda
+resource "aws_lambda_permission" "api_gateway_invoke_delete_course" {
+  statement_id  = "AllowAPIGatewayInvokeDeleteLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = var.delete_course_arn
+  principal     = "apigateway.amazonaws.com"
+}
 
 
 
