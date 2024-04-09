@@ -462,73 +462,79 @@ resource "aws_lambda_permission" "api_gateway_invoke_get_course" {
 
 
 
-# #  METHOD PUT for /courses/{id}
-# resource "aws_api_gateway_method" "course_by_id_put" {
-#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
-#   resource_id   = aws_api_gateway_resource.course_by_id.id
-#   http_method   = "PUT"
-#   authorization = "NONE"
-# }
+#  METHOD PUT for /courses/{id}
+resource "aws_api_gateway_method" "put_method" {
+  rest_api_id   = aws_api_gateway_rest_api.my_api.id
+  resource_id   = aws_api_gateway_resource.course_by_id.id
+  http_method   = "PUT"
+  authorization = "NONE"
+}
 
-# Створення моделі для валідації запиту
-# resource "aws_api_gateway_model" "course_input_model" {
-#   rest_api_id  = aws_api_gateway_rest_api.my_api.id
-#   name         = "CourseInputModel"
-#   content_type = "application/json"
-#   schema = <<EOF
-# {
-#   "$schema": "http://json-schema.org/schema#",
-#   "title": "CourseInputModel",
-#   "type": "object",
-#   "properties": {
-#     "title": {"type": "string"},
-#     "authorId": {"type": "string"},
-#     "length": {"type": "string"},
-#     "category": {"type": "string"}
-#   },
-#   "required": ["title", "authorId", "length", "category"]
-# }
-# EOF
-# }
+resource "aws_api_gateway_integration" "put" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.put_method.http_method
+  integration_http_method = "POST"
+  type = "AWS"
+  uri = var.save_course_invoke_arn
+  
+  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
 
-# # Прикріплення моделі до методу POST
-# resource "aws_api_gateway_integration" "courses_post_integration" {
-#   rest_api_id             = aws_api_gateway_rest_api.my_api.id
-#   resource_id             = aws_api_gateway_resource.courses.id
-#   http_method             = aws_api_gateway_method.courses_post.http_method
-#   integration_http_method = "POST"
-#   type                    = "AWS_PROXY"
-#   uri                     = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.save_course.arn}/invocations"
-#   request_templates = {
-#     "application/json" = jsonencode({
-#       statusCode = 200
-#     })
-#   }
-# }
+     request_templates = {
+      "application/xml" = <<EOF
+        {
+          "id": "$input.params('id')",
+          "title": "$input.params('$.title')",
+          "authorId": "$input.params('$.authorId')",
+          "length": "$input.params('$.length')",
+          "category": "$input.params('$.category')"
+        }
+      EOF
+    }
 
-# # Прикріплення моделі до методу PUT
-# resource "aws_api_gateway_integration" "course_by_id_put_integration" {
-#   rest_api_id             = aws_api_gateway_rest_api.my_api.id
-#   resource_id             = aws_api_gateway_resource.course_by_id.id
-#   http_method             = aws_api_gateway_method.course_by_id.http_method
-#   type = "PUT"
-# }
+  content_handling = "CONVERT_TO_TEXT"
+}
+
+resource "aws_api_gateway_method_response" "put" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.put_method.http_method
+  status_code = "200"
+
+  response_models = { "application/json" = "Empty" }
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.Access-Control-Allow-Origin" = false
+  }
+}
+
+resource "aws_api_gateway_integration_response" "put" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.put_method.http_method
+  status_code = aws_api_gateway_method_response.put.status_code
+
+  response_templates = {
+    "application/xml" = <<EOF
+    {
+      "body" : $input.json('$')
+    }
+    EOF
+  }
+
+  content_handling = "CONVERT_TO_TEXT"
+}
+
+resource "aws_lambda_permission" "api_gateway_invoke_put_course" {
+  statement_id  = "AllowAPIGatewayInvokePUTLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = var.save_course_arn
+  principal     = "apigateway.amazonaws.com"
+}
 
 
-# # Прикріплення моделі до методу PUT
-# resource "aws_api_gateway_integration" "course_by_id_put_integration" {
-#   rest_api_id             = aws_api_gateway_rest_api.my_api.id
-#   resource_id             = aws_api_gateway_resource.course_by_id.id
-#   http_method             = aws_api_gateway_method.course_by_id_put.http_method
-#   integration_http_method = "PUT"
-#   type                    = "AWS_PROXY"
-#   uri                     = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.update_course.arn}/invocations"
-#   request_templates = {
-#     "application/json" = jsonencode({
-#       statusCode = 200
-#     })
-#   }
-# }
+
 
 # # Прикріплення моделі до методу DELETE
 # resource "aws_api_gateway_integration" "course_by_id_delete_integration" {
@@ -577,6 +583,6 @@ resource "aws_api_gateway_deployment" "deployment" {
   stage_name = "dev"
 }
 
-# module "cors" {
+# module "cors" 
 #   source = "squidfunk/api-gateway-enable-cors/aws"
 #   version = "0.3.3"
