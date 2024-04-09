@@ -276,8 +276,6 @@ resource "aws_api_gateway_integration_response" "courses_options_integration_res
 }
 
 
-
-
 /// COURSES POST 
 
 resource "aws_api_gateway_model" "my_api" {
@@ -385,51 +383,86 @@ resource "aws_lambda_permission" "api_gateway_invoke_post_courses" {
 
 
 
-# # Створення ресурсу /courses/{id}
-# resource "aws_api_gateway_resource" "course_by_id" {
-#   rest_api_id = aws_api_gateway_rest_api.my_api.id
-#   parent_id   = aws_api_gateway_resource.courses.id
-#   path_part   = "{id}"
-# }
+# Resource for /courses/{id}
+resource "aws_api_gateway_resource" "course_by_id" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  parent_id   = aws_api_gateway_resource.courses.id
+  path_part   = "{id}"
+}
+
+resource "aws_api_gateway_method" "get_course" {
+  rest_api_id   = aws_api_gateway_rest_api.my_api.id
+  resource_id   = aws_api_gateway_resource.course_by_id.id
+  http_method   = "GET"
+  authorization = "NONE"
+  request_validator_id = aws_api_gateway_request_validator.my_api.id
+}
+
+resource "aws_api_gateway_method_response" "get_course" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.get_course.http_method
+  status_code = "200"
+
+  response_models = { "application/json" = aws_api_gateway_model.my_api.name }
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.Access-Control-Allow-Origin" = false
+  }
+}
+
+resource "aws_api_gateway_integration" "get_course" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.get_course.http_method
+  integration_http_method = "POST"
+  type = "AWS"
+  uri = var.get_one_course_invoke_arn
+  
+  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
+
+request_templates = {
+  "application/json" = <<EOF
+{
+  "id": "$input.params('id')"
+}
+EOF
+}
+
+  content_handling = "CONVERT_TO_TEXT"
+}
 
 
 
+resource "aws_api_gateway_integration_response" "get_course" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.course_by_id.id
+  http_method = aws_api_gateway_method.get_course.http_method
+  status_code = aws_api_gateway_method_response.get_course.status_code
+
+response_templates = {
+  "application/json" = <<EOF
+{
+  "body" : $input.json('$')
+}
+EOF
+}
+
+  content_handling = "CONVERT_TO_TEXT"
+}
+# //----------------------------
+# Додавання дозволу на виклик функції Lambda
+resource "aws_lambda_permission" "api_gateway_invoke_get_course" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.get_one_course_arn
+  principal     = "apigateway.amazonaws.com"
+}
 
 
 
-
-
-
-
-# # Створення методу GET для /courses
-# resource "aws_api_gateway_method" "courses_get" {
-#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
-#   resource_id   = aws_api_gateway_resource.courses.id
-#   http_method   = "GET"
-#   authorization = "NONE"
-# }
-
-
-
-
-# # Створення методу OPTIONS для /authors
-# resource "aws_api_gateway_method" "authors_options" {
-#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
-#   resource_id   = aws_api_gateway_resource.authors.id
-#   http_method   = "OPTIONS"
-#   authorization = "NONE"
-# }
-
-
-# Створення методу GET для /courses
-# resource "aws_api_gateway_method" "courses_post" {
-#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
-#   resource_id   = aws_api_gateway_resource.courses.id
-#   http_method   = "GET"
-#   authorization = "NONE"
-# }
-
-# # Створення методу PUT для /courses/{id}
+# #  METHOD PUT for /courses/{id}
 # resource "aws_api_gateway_method" "course_by_id_put" {
 #   rest_api_id   = aws_api_gateway_rest_api.my_api.id
 #   resource_id   = aws_api_gateway_resource.course_by_id.id
@@ -437,7 +470,7 @@ resource "aws_lambda_permission" "api_gateway_invoke_post_courses" {
 #   authorization = "NONE"
 # }
 
-# # Створення моделі для валідації запиту
+# Створення моделі для валідації запиту
 # resource "aws_api_gateway_model" "course_input_model" {
 #   rest_api_id  = aws_api_gateway_rest_api.my_api.id
 #   name         = "CourseInputModel"
