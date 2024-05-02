@@ -1,3 +1,7 @@
+locals {
+  tag_name = var.use_locals ? "forum" : var.bucket_name
+}
+
 module "course" {
     source = "./modules/dynamodb/eu-central-1"
     name = "courses"
@@ -48,4 +52,11 @@ module "api" {
     get_one_course_invoke_arn = module.lambda.get_one_course_invoke_arn
     delete_course_arn = module.lambda.delete_course_arn
     delete_course_invoke_arn = module.lambda.delete_course_invoke_arn
+    update_course_arn = module.lambda.update_course_arn
+    update_course_invoke_arn = module.lambda.update_course_invoke_arn
 }
+
+# module "s3-bucket" {
+#   source  = "terraform-aws-modules/s3-bucket/aws"
+#   version = "4.1.2"
+# }

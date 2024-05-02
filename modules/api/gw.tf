@@ -1,11 +1,36 @@
 // IT WORKS HALELUJAH
 
+module "labels" {
+  source  = "cloudposse/label/null"
+  name    = var.name
+  stage   = var.stage
+}
 // API 
 resource "aws_api_gateway_rest_api" "my_api" {
   name        = "my api"
   description = "API example with CORS."
 }
 
+
+resource "aws_api_gateway_model" "my_api" {
+  rest_api_id  = aws_api_gateway_rest_api.my_api.id
+  name         = "mymodel"
+  description  = "a JSON schema"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema": "http://json-schema.org/schema#",
+    "title": "json_courses",
+    "type": "object",
+    "properties": {
+      "title": {"type": "string"},
+      "authorId": {"type": "string"},
+      "length": {"type": "string"},
+      "category": {"type": "string"}
+    },
+    "required": ["title", "authorId", "length", "category"]
+  })
+}
 # First resourse for an API - authors 
 resource "aws_api_gateway_resource" "authors" {
   rest_api_id = aws_api_gateway_rest_api.my_api.id
@@ -27,17 +52,6 @@ resource "aws_api_gateway_integration" "get_authors" {
   integration_http_method = "POST"
   type = "AWS"
   uri = var.get_all_authors_invoke_arn
-  
-  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
-
-     request_templates       = {
-    "application/xml" = <<EOF
-  {
-     "body" : $input.json('$')
-  }
-  EOF
-  }
-  content_handling = "CONVERT_TO_TEXT"
 }
 
 resource "aws_api_gateway_method_response" "get_authors" {
@@ -61,21 +75,11 @@ resource "aws_api_gateway_integration_response" "get_authors" {
   http_method = aws_api_gateway_method.get_authors.http_method
   status_code = aws_api_gateway_method_response.get_authors.status_code
 
-response_templates = {
-  "application/xml" = <<EOF
-  {
-     "body" : $input.json('$')
-  }
-  EOF
-}
-
   response_parameters = {
         "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
         "method.response.header.Access-Control-Allow-Methods" = "'GET, OPTIONS'",
         "method.response.header.Access-Control-Allow-Origin" = "'*'"
-    }
-
-  content_handling = "CONVERT_TO_TEXT"
+  }
 }
 
 // !!! LAMBDA PERMISSIONS MUST HAVE
@@ -84,6 +88,8 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
   action        = "lambda:InvokeFunction"
   function_name = var.get_all_authors_arn
   principal     = "apigateway.amazonaws.com"
+
+   source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
 
 # OPTIONS for /authors
@@ -169,17 +175,6 @@ resource "aws_api_gateway_integration" "get_courses" {
   integration_http_method = "POST"
   type = "AWS"
   uri = var.get_all_courses_invoke_arn
-  
-  request_parameters  = {"integration.request.header.X-Authorization" = "'static'"}
-
-     request_templates       = {
-    "application/xml" = <<EOF
-  {
-     "body" : $input.json('$')
-  }
-  EOF
-  }
-  content_handling = "CONVERT_TO_TEXT"
 }
 
 resource "aws_api_gateway_method_response" "get_courses" {
@@ -203,20 +198,11 @@ resource "aws_api_gateway_integration_response" "get_courses" {
   http_method = aws_api_gateway_method.get_courses.http_method
   status_code = aws_api_gateway_method_response.get_courses.status_code
 
-response_templates = {
-  "application/xml" = <<EOF
-  {
-     "body" : $input.json('$')
-  }
-  EOF
-}
   response_parameters = {
         "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
         "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'",
         "method.response.header.Access-Control-Allow-Origin" = "'*'"
-    }
-
-  content_handling = "CONVERT_TO_TEXT"
+  }
 }
 # //----------------------------
 # Додавання дозволу на виклик функції Lambda
@@ -225,6 +211,8 @@ resource "aws_lambda_permission" "api_gateway_invoke_courses" {
   action        = "lambda:InvokeFunction"
   function_name = var.get_all_courses_arn
   principal     = "apigateway.amazonaws.com"
+
+   source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
 
 # Додавання методу OPTIONS для /courses
@@ -288,25 +276,28 @@ resource "aws_api_gateway_integration_response" "courses_options_integration_res
 
 /// COURSES POST 
 
-resource "aws_api_gateway_model" "my_api" {
+resource "aws_api_gateway_model" "courses_post" {
   rest_api_id  = aws_api_gateway_rest_api.my_api.id
-  name         = "mymodel"
+  name         = "PostCourse"
   description  = "a JSON schema"
   content_type = "application/json"
 
-  schema = jsonencode({
-    "$schema": "http://json-schema.org/schema#",
-    "title": "json_courses",
-    "type": "object",
-    "properties": {
-      "title": {"type": "string"},
-      "authorId": {"type": "string"},
-      "length": {"type": "string"},
-      "category": {"type": "string"}
-    },
-    "required": ["title", "authorId", "length", "category"]
-  })
+  schema = <<EOF
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "CourseInputModel",
+  "type": "object",
+  "properties": {
+    "title": {"type": "string"},
+    "authorId": {"type": "string"},
+    "length": {"type": "string"},
+    "category": {"type": "string"}
+  },
+  "required": ["title", "authorId", "length", "category"]
 }
+EOF
+}
+
 
 resource "aws_api_gateway_request_validator" "my_api" {
   name                        = "POSTExampleRequestValidator"
@@ -323,7 +314,7 @@ resource "aws_api_gateway_method" "post_courses" {
 request_validator_id = aws_api_gateway_request_validator.my_api.id
 
   request_models = {
-    "application/json" = aws_api_gateway_model.my_api.name
+    "application/json" = aws_api_gateway_model.courses_post.name
   }
 }
 
@@ -358,11 +349,6 @@ resource "aws_api_gateway_integration" "post_courses" {
   }
   EOF
   }
-
-  
-
-  
-  content_handling = "CONVERT_TO_TEXT"
 }
 
 
@@ -373,21 +359,11 @@ resource "aws_api_gateway_integration_response" "post_courses" {
   http_method = aws_api_gateway_method.post_courses.http_method
   status_code = aws_api_gateway_method_response.post_courses.status_code
 
-response_templates = {
-  "application/xml" = <<EOF
-  {
-     "body" : $input.json('$')
-  }
-  EOF
-}
-
   response_parameters = {
         "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
         "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST,PUT,GET'",
         "method.response.header.Access-Control-Allow-Origin" = "'*'"
-    }
-
-  content_handling = "CONVERT_TO_TEXT"
+  }
 }
 # //----------------------------
 # Додавання дозволу на виклик функції Lambda
@@ -396,6 +372,8 @@ resource "aws_lambda_permission" "api_gateway_invoke_post_courses" {
   action        = "lambda:InvokeFunction"
   function_name = var.save_course_arn
   principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
 
 
@@ -403,6 +381,25 @@ resource "aws_lambda_permission" "api_gateway_invoke_post_courses" {
 
 
 # Resource for /courses/{id}
+
+resource "aws_api_gateway_model" "course_by_id" {
+  rest_api_id  = aws_api_gateway_rest_api.my_api.id
+  name         = replace("API-GetDeleteCourse", "-", "")
+  description  = "a JSON schema"
+  content_type = "application/json"
+  schema = <<EOF
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "CourseInputModel",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"}
+  },
+  "required": ["id"]
+}
+EOF
+}
+
 resource "aws_api_gateway_resource" "course_by_id" {
   rest_api_id = aws_api_gateway_rest_api.my_api.id
   parent_id   = aws_api_gateway_resource.courses.id
@@ -423,12 +420,31 @@ resource "aws_api_gateway_method_response" "get_course" {
   http_method = aws_api_gateway_method.get_course.http_method
   status_code = "200"
 
-  response_models = { "application/json" = aws_api_gateway_model.my_api.name }
+  response_models = { "application/json" = aws_api_gateway_model.course_by_id.name }
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = true,
     "method.response.header.Access-Control-Allow-Methods" = true,
     "method.response.header.Access-Control-Allow-Origin" = true
   }
+}
+
+#Courses/{id}-GET
+resource "aws_api_gateway_model" "courses_by_id" {
+  rest_api_id  = aws_api_gateway_rest_api.my_api.id
+  name         = replace("API-GetDeleteCourse", "-", "")
+  description  = "a JSON schema"
+  content_type = "application/json"
+  schema = <<EOF
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "CourseInputModel",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"}
+  },
+  "required": ["id"]
+}
+EOF
 }
 
 resource "aws_api_gateway_integration" "get_course" {
@@ -439,15 +455,11 @@ resource "aws_api_gateway_integration" "get_course" {
   type = "AWS"
   uri = var.get_one_course_invoke_arn
   
-  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
+  // request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
 
-request_templates = {
-  "application/json" = <<EOF
-{
-  "id": "$input.params('id')"
-}
-EOF
-}
+  request_templates       = {
+    "application/json" = "{\"id\": \"$input.params('id')\"}"
+  }
 
   content_handling = "CONVERT_TO_TEXT"
 }
@@ -460,15 +472,15 @@ resource "aws_api_gateway_integration_response" "get_course" {
   http_method = aws_api_gateway_method.get_course.http_method
   status_code = aws_api_gateway_method_response.get_course.status_code
 
-response_templates = {
-  "application/json" = <<EOF
-{
-  "body" : $input.json('$')
-}
-EOF
-}
+  
 
-  content_handling = "CONVERT_TO_TEXT"
+  response_parameters = {
+        "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'",
+        "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    }
+
+    
 }
 # //----------------------------
 # Додавання дозволу на виклик функції Lambda
@@ -477,6 +489,8 @@ resource "aws_lambda_permission" "api_gateway_invoke_get_course" {
   action        = "lambda:InvokeFunction"
   function_name = var.get_one_course_arn
   principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
 
 
@@ -497,21 +511,15 @@ resource "aws_api_gateway_integration" "put" {
   type = "AWS"
   uri = var.save_course_invoke_arn
   
-  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
+  // request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
 
      request_templates = {
-      "application/xml" = <<EOF
-        {
-          "id": "$input.params('id')",
-          "title": "$input.params('$.title')",
-          "authorId": "$input.params('$.authorId')",
-          "length": "$input.params('$.length')",
-          "category": "$input.params('$.category')"
-        }
-      EOF
-    }
-
-  content_handling = "CONVERT_TO_TEXT"
+    "application/xml" = <<EOF
+  {
+    "body" : $input.json('$')
+  }
+  EOF
+  }
 }
 
 resource "aws_api_gateway_method_response" "put" {
@@ -529,35 +537,29 @@ resource "aws_api_gateway_method_response" "put" {
 }
 
 resource "aws_api_gateway_integration_response" "put" {
+
+  depends_on = [aws_api_gateway_integration.put]
+
   rest_api_id = aws_api_gateway_rest_api.my_api.id
   resource_id = aws_api_gateway_resource.course_by_id.id
   http_method = aws_api_gateway_method.put_method.http_method
   status_code = aws_api_gateway_method_response.put.status_code
 
-  response_templates = {
-    "application/xml" = <<EOF
-    {
-      "body" : $input.json('$')
-    }
-    EOF
-  }
-
   response_parameters = {
         "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
         "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,PUT'",
         "method.response.header.Access-Control-Allow-Origin" = "'*'"
-    }
-  content_handling = "CONVERT_TO_TEXT"
+  }
 }
 
 resource "aws_lambda_permission" "api_gateway_invoke_put_course" {
   statement_id  = "AllowAPIGatewayInvokePUTLambda"
   action        = "lambda:InvokeFunction"
-  function_name = var.save_course_arn
+  function_name = var.update_course_arn
   principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
-
-
 
 // DELETE 
 
@@ -569,13 +571,25 @@ resource "aws_api_gateway_method" "delete" {
   request_validator_id = aws_api_gateway_request_validator.my_api.id
 }
 
+# //----------------------------
+# Додавання дозволу на виклик функції Lambda
+resource "aws_lambda_permission" "api_gateway_invoke_delete_course" {
+  statement_id  = "AllowAPIGatewayInvokeDeleteLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = var.delete_course_arn
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
+}
+
+
 resource "aws_api_gateway_method_response" "delete_course" {
   rest_api_id = aws_api_gateway_rest_api.my_api.id
   resource_id = aws_api_gateway_resource.course_by_id.id
   http_method = aws_api_gateway_method.delete.http_method
   status_code = "200"
 
-  response_models = { "application/json" = aws_api_gateway_model.my_api.name }
+ response_models = { "application/json" = "Empty" }
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = true,
     "method.response.header.Access-Control-Allow-Methods" = true,
@@ -591,17 +605,13 @@ resource "aws_api_gateway_integration" "delete_course" {
   type = "AWS"
   uri = var.delete_course_invoke_arn
   
-  request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
+ // request_parameters      = {"integration.request.header.X-Authorization" = "'static'"}
 
-  request_templates = {
-    "application/json" = <<EOF
-      {
-        "id": "$input.params('id')"
-      }
-    EOF
+ request_templates       = {
+    "application/json" = "{\"id\": \"$input.params('id')\"}"
   }
 
-  content_handling = "CONVERT_TO_TEXT"
+  // content_handling = "CONVERT_TO_TEXT"
 }
 
 
@@ -612,39 +622,12 @@ resource "aws_api_gateway_integration_response" "delete_course" {
   http_method = aws_api_gateway_method.delete.http_method
   status_code = aws_api_gateway_method_response.delete_course.status_code
 
-response_templates = {
-  "application/json" = <<EOF
-{
-  "body" : $input.json('$')
-}
-EOF
-}
-
   response_parameters = {
         "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-        "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS, DELETE'",
+        "method.response.header.Access-Control-Allow-Methods" = "'GET, PUT, POST, OPTIONS, DELETE'",
         "method.response.header.Access-Control-Allow-Origin" = "'*'"
-    }
-
-  content_handling = "CONVERT_TO_TEXT"
+  }
 }
-# //----------------------------
-# Додавання дозволу на виклик функції Lambda
-resource "aws_lambda_permission" "api_gateway_invoke_delete_course" {
-  statement_id  = "AllowAPIGatewayInvokeDeleteLambda"
-  action        = "lambda:InvokeFunction"
-  function_name = var.delete_course_arn
-  principal     = "apigateway.amazonaws.com"
-}
-
-// OPTIONS FOR ID
-
-# resource "aws_api_gateway_method" "id_options" {
-#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
-#   resource_id   = aws_api_gateway_resource.course_by_id.id
-#   http_method   = "OPTIONS"
-#   authorization = "NONE"
-# }
 
 resource "aws_api_gateway_method" "id_options" {
   rest_api_id   = aws_api_gateway_rest_api.my_api.id
@@ -691,7 +674,7 @@ resource "aws_api_gateway_integration_response" "id_options_integration_response
 
   response_parameters = {
         "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-        "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT'",
+        "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'",
         "method.response.header.Access-Control-Allow-Origin" = "'*'"
     }
 
@@ -701,47 +684,6 @@ resource "aws_api_gateway_integration_response" "id_options_integration_response
     ]
 }
 
-
-
-
-
-// DEPLOYMENT
-
-# resource "aws_api_gateway_deployment" "deployment" {
-#   depends_on = [
-#     aws_api_gateway_integration.get_authors,
-#     # aws_api_gateway_integration.authors_options_integration, 
-#     aws_api_gateway_integration.get_courses,
-#   ]
-
-#   rest_api_id = aws_api_gateway_rest_api.my_api.id
-#   stage_name = "dev"
-# }
-
-# resource "aws_api_gateway_deployment" "deployment" {
-#   rest_api_id = aws_api_gateway_rest_api.my_api.id
-
-#   triggers = {
-  
-#     redeployment = sha1(jsonencode([
-#       aws_api_gateway_resource.authors.id,
-#       aws_api_gateway_method.get_authors.id,
-#       aws_api_gateway_integration.get_authors.id,
-
-#       aws_api_gateway_resource.courses.id,
-#       aws_api_gateway_method.get_courses.id,
-#       aws_api_gateway_integration.get_courses.id,
-
-#       aws_api_gateway_resource.course_by_id.id,
-#       aws_api_gateway_method.get_course.id,
-#       aws_api_gateway_integration.get_course.id,
-#     ]))
-#   }
-
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
 
 resource "aws_api_gateway_deployment" "deployment" {
   depends_on = [

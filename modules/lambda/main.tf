@@ -89,6 +89,11 @@ resource "aws_lambda_function" "get_one_course" {
   runtime = "nodejs16.x"
 }
 
+
+// OPTIONS FOR {ID}
+
+
+
 data "archive_file" "delete_course" {
   type        = "zip"
   source_file = "modules/lambda/functions/delete-course/delete-course.js"

@@ -33,9 +33,13 @@ variable "save_course_invoke_arn" {
   type = string
 }
 
-# variable "update_course_arn" {
-#   type = string
-# }
+variable "update_course_arn" {
+  type = string
+}
+
+variable "update_course_invoke_arn" {
+  type = string
+}
 
 variable "get_all_courses_arn" {
   type = string
